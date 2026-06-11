@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<!-- スクーミー 音のフーリエラボ | version: v1.0 -->
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>スクーミー 音のフーリエラボ v1.0</title>
+<style>
+  :root{
+    --teal:#3AABA8;--teal-d:#2c8a87;--cream:#F5E4C4;--orange:#E88A0A;
+    --blue:#2E8EC4;--ink:#2d3439;--ink2:#5a6b71;--muted:#8a9aa0;
+    --bg:#ffffff;--soft:#f6f8f8;--line:#e3eaea;--red:#e0524b;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--soft);}
+  body{color:var(--ink);font-family:"Meiryo","Hiragino Kaku Gothic ProN",system-ui,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.6;}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 18px 120px;}
+
+  header{background:var(--bg);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20;}
+  .hd-in{max-width:1180px;margin:0 auto;padding:14px 18px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+  .logo{background:var(--teal);color:#fff;font-weight:800;font-size:13px;padding:5px 11px;border-radius:8px;letter-spacing:.02em;}
+  .h-title{font-size:21px;font-weight:800;margin:0;}
+  .h-title b{color:var(--teal);font-weight:800;}
+  .pill{font-size:12px;color:var(--ink2);border:1px solid var(--line);border-radius:999px;padding:2px 10px;}
+  .hd-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+  .clock{font-variant-numeric:tabular-nums;color:var(--ink2);font-size:14px;}
+  .chip{display:flex;align-items:center;gap:7px;font-size:13px;border:1px solid var(--line);border-radius:8px;padding:6px 11px;color:var(--ink2);background:#fff;cursor:pointer;}
+  .chip:hover{border-color:var(--teal);}
+  .chip.demo{border-color:var(--orange);color:var(--orange);}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--muted);}
+  .dot.on{background:var(--teal);box-shadow:0 0 8px var(--teal);}
+  .dot.demo{background:var(--orange);box-shadow:0 0 8px var(--orange);}
+
+  .tabs{display:flex;gap:6px;margin:22px 0 18px;flex-wrap:wrap;}
+  .tab{border:1px solid var(--line);border-bottom:none;background:var(--soft);color:var(--ink2);padding:11px 20px;border-radius:12px 12px 0 0;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;}
+  .tab .n{font-size:11px;width:20px;height:20px;border-radius:50%;background:var(--line);color:var(--ink2);display:grid;place-items:center;font-weight:800;}
+  .tab.active{background:#fff;color:var(--teal);position:relative;}
+  .tab.active::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:3px;background:var(--teal);border-radius:3px;}
+  .tab.active .n{background:var(--teal);color:#fff;}
+
+  .view{display:none;}
+  .view.active{display:block;}
+
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px;}
+  @media(max-width:760px){.stats{grid-template-columns:repeat(2,1fr);}}
+  .stat{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 18px;border-top:4px solid var(--teal);}
+  .stat.max{border-top-color:var(--orange);}
+  .stat.min{border-top-color:var(--blue);}
+  .stat .lbl{font-size:13px;color:var(--ink2);}
+  .stat .val{font-size:34px;font-weight:800;line-height:1.1;margin-top:6px;font-variant-numeric:tabular-nums;}
+  .stat.max .val{color:var(--orange);}
+  .stat.min .val{color:var(--blue);}
+  .stat .sub{font-size:11.5px;color:var(--muted);margin-top:2px;}
+
+  .panel{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px 20px;margin-bottom:18px;}
+  .panel h2{font-size:16px;margin:0 0 4px;font-weight:800;display:flex;align-items:center;gap:9px;}
+  .panel h2 .ic{width:26px;height:26px;border-radius:7px;background:var(--soft);display:grid;place-items:center;font-size:14px;border:1px solid var(--line);}
+  .panel .desc{font-size:13px;color:var(--ink2);margin:0 0 12px;}
+  canvas{width:100%;display:block;background:#fdfefe;border:1px solid var(--line);border-radius:10px;}
+
+  .hint{text-align:center;color:var(--muted);font-size:13px;padding:14px;background:var(--soft);border-radius:10px;margin-top:10px;}
+
+  .link-card{border-radius:14px;padding:15px 18px;margin-bottom:18px;border:1px solid var(--line);background:var(--soft);}
+  .link-card .tag{display:inline-block;font-size:11.5px;font-weight:800;color:#fff;padding:2px 10px;border-radius:999px;margin-bottom:8px;letter-spacing:.04em;}
+  .tag.math{background:var(--teal);}
+  .tag.phys{background:var(--blue);}
+  .tag.chem{background:var(--orange);}
+  .link-card h3{margin:0 0 4px;font-size:14.5px;}
+  .link-card p{margin:0;font-size:13px;color:var(--ink2);}
+  .link-card .formula{font-family:"Cambria Math","Times New Roman",serif;font-style:italic;font-size:16px;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin:9px 0;text-align:center;}
+
+  .sin-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+  @media(max-width:760px){.sin-row{grid-template-columns:1fr;}}
+  .sin-box{background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:12px;}
+  .sin-box .nm{font-size:12px;color:var(--ink2);font-weight:700;}
+  .sin-box .eq{font-family:"Cambria Math",serif;font-style:italic;font-size:13px;color:var(--teal-d);min-height:20px;}
+  .sin-box canvas{height:90px;}
+
+  .math-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+  @media(max-width:860px){.math-grid{grid-template-columns:1fr;}}
+  .ctrl{margin:14px 0;}
+  .ctrl label{font-size:13px;color:var(--ink2);display:flex;justify-content:space-between;margin-bottom:6px;}
+  .ctrl .v{color:var(--teal-d);font-weight:800;font-variant-numeric:tabular-nums;}
+  input[type=range]{width:100%;accent-color:var(--teal);}
+
+  .connectbar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);z-index:25;box-shadow:0 -2px 18px rgba(0,0,0,.05);}
+  .cb-in{max-width:1180px;margin:0 auto;padding:12px 18px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+  .cb-in .dev{font-weight:800;color:var(--teal-d);font-size:14px;letter-spacing:.04em;}
+  .btn{font-family:inherit;font-size:14px;cursor:pointer;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--ink);padding:10px 18px;}
+  .btn.primary{background:var(--teal);border-color:var(--teal);color:#fff;font-weight:800;}
+  .btn.primary:hover{filter:brightness(1.06);}
+  .btn:disabled{opacity:.4;cursor:not-allowed;}
+  .cb-status{font-size:13px;color:var(--ink2);}
+  .cb-right{margin-left:auto;text-align:right;}
+  .cb-right .l{font-size:11px;color:var(--muted);}
+  .cb-right .v{font-size:22px;font-weight:800;color:var(--orange);font-variant-numeric:tabular-nums;}
+
+  footer{text-align:center;color:var(--muted);font-size:12px;padding:20px 0 8px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hd-in">
+    <span class="logo">SchooMy</span>
+    <h1 class="h-title">音の<b>フーリエ</b>ラボ</h1>
+    <span class="pill">v1.0</span>
+    <div class="hd-right">
+      <span class="clock" id="clock">--:--:--</span>
+      <span class="chip" id="statusChip"><span class="dot" id="statusDot"></span><span id="statusText">未接続</span></span>
+      <span class="chip demo" id="demoBtn">▶ デモ</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="tabs">
+    <div class="tab active" data-view="measure"><span class="n">1</span>測る</div>
+    <div class="tab" data-view="decompose"><span class="n">2</span>分ける</div>
+    <div class="tab" data-view="math"><span class="n">3</span>数学のしくみ</div>
+  </div>
+
+  <!-- TAB 1 -->
+  <section class="view active" id="view-measure">
+    <div class="stats">
+      <div class="stat max"><div class="lbl">最大値</div><div class="val" id="stMax">--</div><div class="sub">直近10秒</div></div>
+      <div class="stat avg"><div class="lbl">平均値</div><div class="val" id="stAvg">--</div><div class="sub">直近10秒</div></div>
+      <div class="stat min"><div class="lbl">最小値</div><div class="val" id="stMin">--</div><div class="sub">直近10秒</div></div>
+      <div class="stat cur"><div class="lbl">現在値</div><div class="val" id="stCur">--</div><div class="sub">相対レベル 0–100</div></div>
+    </div>
+
+    <div class="panel">
+      <h2><span class="ic">〜</span>音の波形（時間で見る）</h2>
+      <p class="desc">マイクが受け取った振動を時間の流れに沿って表示します。揺れの大きさ＝音の大きさ、揺れの細かさ＝音の高さです。</p>
+      <canvas id="cvWave" width="1100" height="240"></canvas>
+      <div class="hint" id="waveHint">下のバーから「接続」、またはヘッダーの「デモ」を押してください。</div>
+    </div>
+
+    <div class="link-card">
+      <span class="tag phys">物理</span>
+      <h3>波の「振幅」と「周波数」</h3>
+      <p>波の高さ（振幅）が音の大きさ、1秒あたりの波の数（周波数 Hz）が音の高さに対応します。波の重ね合わせや「うなり」もこの画面で観察できます。</p>
+    </div>
+
+    <div class="panel">
+      <h2><span class="ic">▥</span>スペクトル（どんな高さの音が含まれるか）</h2>
+      <p class="desc">フーリエ変換（FFT）で、波の中に含まれる音の高さごとの強さを取り出した結果です。横軸が周波数、山が高いほどその高さの音が強く含まれます。</p>
+      <canvas id="cvSpec" width="1100" height="240"></canvas>
+      <div class="hint">サンプリングレート fs ≒ <b id="fsVal">--</b> Hz ／ 見える上限 ≒ <b id="nyqVal">--</b> Hz（9600bps の制約）</div>
+    </div>
+
+    <div class="link-card">
+      <span class="tag chem">化学</span>
+      <h3>スペクトルは物質の「指紋」</h3>
+      <p>含まれる成分のパターンは、物を見分ける手がかりになります。赤外分光（FTIR）はまさにフーリエ変換を使って物質を分析し、炎色反応や発光スペクトルも「光の成分」で元素を見分ける同じ発想です。</p>
+    </div>
+  </section>
+
+  <!-- TAB 2 -->
+  <section class="view" id="view-decompose">
+    <div class="panel">
+      <h2><span class="ic">÷</span>強い sin 波 上位3本に分解</h2>
+      <p class="desc">複雑に見える波も、きれいな sin 波の足し算でできています。フーリエ変換で特に強い sin 波を3本取り出しました。</p>
+      <div class="sin-row">
+        <div class="sin-box"><div class="nm">sin 1</div><div class="eq" id="eq1">y = --</div><canvas id="cvS1" width="360" height="90"></canvas></div>
+        <div class="sin-box"><div class="nm">sin 2</div><div class="eq" id="eq2">y = --</div><canvas id="cvS2" width="360" height="90"></canvas></div>
+        <div class="sin-box"><div class="nm">sin 3</div><div class="eq" id="eq3">y = --</div><canvas id="cvS3" width="360" height="90"></canvas></div>
+      </div>
+    </div>
+
+    <div class="link-card">
+      <span class="tag math">数学</span>
+      <h3>三角関数の合成・フーリエ級数</h3>
+      <p>数学Ⅱで習う「sin と cos の合成」を無限に拡張すると、どんな周期的な波も sin 波の和で表せる——これがフーリエ級数の考え方です。3本足すだけでも元の形にかなり近づきます。</p>
+    </div>
+
+    <div class="panel">
+      <h2><span class="ic">≈</span>合成波 と 元波形 の比較</h2>
+      <p class="desc">取り出した3本の sin 波を足し合わせた合成波（破線）と、元の波形（実線）を重ねました。重なるほど、少ない sin 波でうまく再現できたことになります。</p>
+      <canvas id="cvSynth" width="1100" height="240"></canvas>
+      <div class="hint" id="synthHint">接続またはデモで波形を取得すると表示されます。</div>
+    </div>
+  </section>
+
+  <!-- TAB 3 -->
+  <section class="view" id="view-math">
+    <div class="panel">
+      <h2><span class="ic">𝑖</span>虚数で波を「巻きつける」</h2>
+      <p class="desc">フーリエ変換の正体は、波に <i>e<sup>−iθ</sup></i> を掛けて複素平面にぐるぐる巻きつけ、その「重心」を見ることです。巻きつける速さ（周波数）を信号に含まれる周波数に合わせると、重心が中心から大きくずれます。スライダーを動かして探してみましょう。</p>
+
+      <div class="ctrl">
+        <label>巻きつける周波数 f ＝ <span class="v" id="windF">2.00</span> 回/秒</label>
+        <input type="range" id="windFreq" min="0.5" max="8" step="0.05" value="2.0">
+      </div>
+
+      <div class="math-grid">
+        <div>
+          <canvas id="cvWind" width="460" height="460"></canvas>
+          <p class="desc" style="margin-top:8px;">複素平面：実軸（横）＝cos 成分、虚軸（縦）＝sin 成分。<span style="color:var(--orange);font-weight:800;">●</span> が重心です。</p>
+        </div>
+        <div>
+          <canvas id="cvWindSpec" width="460" height="320"></canvas>
+          <p class="desc" style="margin-top:8px;">巻きつけ速さ f ごとの「重心の大きさ」。山＝信号に含まれる周波数です。いまの内部信号は <b>3回/秒</b> と <b>5回/秒</b> を合成しています。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="link-card">
+      <span class="tag math">数学</span>
+      <h3>オイラーの公式 と 複素平面</h3>
+      <div class="formula">e<sup>iθ</sup> = cos θ + i·sin θ</div>
+      <p>虚数 <i>i</i> を掛けることは複素平面で「90°回転」を意味します。<i>e<sup>iθ</sup></i> は単位円上を回る点そのもので、その回転を使って波を分解するのがフーリエ変換です。指数・三角関数・虚数・ベクトルが一本につながる、高校数学の集大成のような式です。</p>
+    </div>
+
+    <div class="link-card">
+      <span class="tag math">数学 ／ 情報</span>
+      <h3>対数（dB）と 標本化定理</h3>
+      <p>音の大きさの単位デシベルは対数で表されます（数学Ⅱの対数）。また「1秒間に何回測るか」で見える音の高さの上限が決まる——これが標本化定理で、情報Ⅰ・Ⅱのデジタル化と直結します。このラボが 9600bps で約90Hzまでしか見えないのも、この定理のためです。</p>
+    </div>
+  </section>
+
+</div>
+
+<div class="connectbar">
+  <div class="cb-in">
+    <span class="dev">MY DEVICE</span>
+    <button class="btn primary" id="connectBtn">⚡ 接続</button>
+    <button class="btn" id="disconnectBtn" disabled>切断</button>
+    <span class="cb-status" id="cbStatus">未接続 — オレンジボードを USB でつないでください</span>
+    <div class="cb-right">
+      <div class="l">現在値</div>
+      <div class="v" id="cbCur">--</div>
+    </div>
+  </div>
+</div>
+
+<footer>SchooMy 音のフーリエラボ v1.0 ｜ 測る・比べる・つながる ｜ fox.schoomy.com</footer>
+
+<script>
+"use strict";
+const VERSION="v1.0";
+const $=id=>document.getElementById(id);
+
+/* ===== FFT (radix-2, iterative) ===== */
+function fft(re,im){
+  const n=re.length;
+  for(let i=1,j=0;i<n;i++){
+    let bit=n>>1;
+    for(;j&bit;bit>>=1) j^=bit;
+    j^=bit;
+    if(i<j){const tr=re[i];re[i]=re[j];re[j]=tr;const ti=im[i];im[i]=im[j];im[j]=ti;}
+  }
+  for(let len=2;len<=n;len<<=1){
+    const ang=-2*Math.PI/len, wr=Math.cos(ang), wi=Math.sin(ang);
+    for(let i=0;i<n;i+=len){
+      let cwr=1,cwi=0;
+      for(let k=0;k<len/2;k++){
+        const a=i+k, b=i+k+len/2;
+        const vr=re[b]*cwr-im[b]*cwi, vi=re[b]*cwi+im[b]*cwr;
+        re[b]=re[a]-vr; im[b]=im[a]-vi;
+        re[a]=re[a]+vr; im[a]=im[a]+vi;
+        const ncwr=cwr*wr-cwi*wi; cwi=cwr*wi+cwi*wr; cwr=ncwr;
+      }
+    }
+  }
+}
+
+/* ===== state ===== */
+const N=256;
+const rawRing=new Float32Array(4096);
+let rawHead=0, rawCount=0;
+let port=null, reader=null, keepReading=false, demo=false, demoTimer=null;
+let curLevel=0;
+const lvHistMax=600; const lvHist=new Float32Array(lvHistMax); let lvHead=0, lvFilled=0;
+let sampleCount=0, lastRateT=performance.now(), fs=180;
+let lastSpec=null, lastWave=null, lastPeaks=null;
+let activeView="measure";
+
+/* ===== serial ===== */
+async function connect(){
+  if(!("serial" in navigator)){alert("このブラウザは Web Serial 非対応です。Chrome / Edge をお使いください。");return;}
+  try{ port=await navigator.serial.requestPort(); await port.open({baudRate:9600}); }
+  catch(e){ return; }
+  stopDemo(); keepReading=true; setStatus("on");
+  $("connectBtn").disabled=true; $("disconnectBtn").disabled=false;
+  $("cbStatus").textContent="接続中 — マイクに音を入れてください";
+  readLoop();
+}
+async function readLoop(){
+  const dec=new TextDecoderStream();
+  const closed=port.readable.pipeTo(dec.writable).catch(()=>{});
+  reader=dec.readable.getReader();
+  let buf="";
+  try{
+    while(keepReading){
+      const {value,done}=await reader.read();
+      if(done)break;
+      buf+=value; let nl;
+      while((nl=buf.indexOf("\n"))>=0){
+        const line=buf.slice(0,nl).trim(); buf=buf.slice(nl+1);
+        if(line){const v=parseFloat(line); if(!isNaN(v)) pushSample(v);}
+      }
+    }
+  }catch(e){}
+  try{reader.releaseLock();}catch(e){}
+  await closed;
+}
+async function disconnect(){
+  keepReading=false;
+  try{if(reader)await reader.cancel();}catch(e){}
+  try{if(port)await port.close();}catch(e){}
+  port=null;reader=null; setStatus("off");
+  $("connectBtn").disabled=false; $("disconnectBtn").disabled=true;
+  $("cbStatus").textContent="未接続 — オレンジボードを USB でつないでください";
+}
+function pushSample(v){
+  rawRing[rawHead]=v; rawHead=(rawHead+1)%rawRing.length;
+  if(rawCount<rawRing.length)rawCount++;
+  sampleCount++;
+}
+
+/* ===== demo ===== */
+function startDemo(){
+  if(port)return;
+  demo=true; setStatus("demo");
+  $("demoBtn").textContent="■ 停止";
+  $("cbStatus").textContent="デモ動作中 — 擬似的な音の波形を流しています";
+  let t=0;
+  demoTimer=setInterval(()=>{
+    const env=0.55+0.45*Math.sin(t*0.06);
+    for(let k=0;k<6;k++){
+      const s=2048
+        +env*420*Math.sin(2*Math.PI*8*t/180)
+        +env*220*Math.sin(2*Math.PI*15*t/180)
+        +env*120*Math.sin(2*Math.PI*23*t/180)
+        +(Math.random()-0.5)*70;
+      pushSample(s); t++;
+    }
+  },16);
+}
+function stopDemo(){
+  if(demoTimer){clearInterval(demoTimer);demoTimer=null;}
+  demo=false; $("demoBtn").textContent="▶ デモ";
+  if(!port){setStatus("off");$("cbStatus").textContent="未接続 — オレンジボードを USB でつないでください";}
+}
+function toggleDemo(){ demo?stopDemo():startDemo(); }
+
+/* ===== analysis ===== */
+function recentSamples(m){
+  const n=Math.min(m,rawCount); const out=new Float32Array(n);
+  for(let i=0;i<n;i++) out[n-1-i]=rawRing[(rawHead-1-i+rawRing.length)%rawRing.length];
+  return out;
+}
+function computeLevel(){
+  const w=recentSamples(64);
+  if(w.length<8)return 0;
+  let mean=0; for(const x of w)mean+=x; mean/=w.length;
+  let sq=0; for(const x of w){const d=x-mean;sq+=d*d;}
+  const rms=Math.sqrt(sq/w.length);
+  let lv=(rms/200)*100; if(lv>100)lv=100; if(lv<0)lv=0;
+  return lv;
+}
+function analyze(){
+  const w=recentSamples(N);
+  if(w.length<N){lastSpec=null;lastWave=null;lastPeaks=null;return;}
+  let mean=0; for(const x of w)mean+=x; mean/=N;
+  const re=new Float64Array(N), im=new Float64Array(N), wave=new Float32Array(N);
+  for(let i=0;i<N;i++){
+    const win=0.5-0.5*Math.cos(2*Math.PI*i/(N-1));
+    const v=(w[i]-mean); wave[i]=v; re[i]=v*win; im[i]=0;
+  }
+  fft(re,im);
+  const half=N/2; const mag=new Float32Array(half);
+  for(let k=0;k<half;k++) mag[k]=Math.hypot(re[k],im[k]);
+  const cand=[];
+  for(let k=2;k<half-1;k++){ if(mag[k]>mag[k-1]&&mag[k]>=mag[k+1]) cand.push({k,m:mag[k],re:re[k],im:im[k]}); }
+  cand.sort((a,b)=>b.m-a.m);
+  lastSpec=mag; lastWave=wave; lastPeaks=cand.slice(0,3);
+}
+
+/* ===== draw helpers ===== */
+function clr(ctx,w,h){ctx.clearRect(0,0,w,h);}
+function grid(ctx,W,H,rows){ctx.strokeStyle="#eef3f3";ctx.lineWidth=1;for(let i=0;i<=rows;i++){const y=(i/rows)*H;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}}
+function drawWave(){
+  const c=$("cvWave"),ctx=c.getContext("2d"),W=c.width,H=c.height;
+  clr(ctx,W,H);grid(ctx,W,H,4);
+  $("waveHint").style.display=(port||demo)?"none":"block";
+  if(!lastWave)return;
+  let mx=1; for(const v of lastWave) if(Math.abs(v)>mx)mx=Math.abs(v);
+  ctx.beginPath();
+  for(let i=0;i<lastWave.length;i++){const x=i/(lastWave.length-1)*W;const y=H/2-(lastWave[i]/mx)*(H/2-12);i?ctx.lineTo(x,y):ctx.moveTo(x,y);}
+  ctx.strokeStyle="#3AABA8";ctx.lineWidth=2;ctx.stroke();
+}
+function drawSpec(){
+  const c=$("cvSpec"),ctx=c.getContext("2d"),W=c.width,H=c.height;
+  clr(ctx,W,H);grid(ctx,W,H,4);
+  if(!lastSpec)return;
+  const half=lastSpec.length; let mx=1e-6; for(const v of lastSpec)if(v>mx)mx=v;
+  const bw=W/half;
+  for(let k=1;k<half;k++){
+    const bh=(lastSpec[k]/mx)*(H-24);
+    const isPeak=lastPeaks&&lastPeaks.some(p=>p.k===k);
+    ctx.fillStyle=isPeak?"#E88A0A":"#9fcecc";
+    ctx.fillRect(k*bw, H-bh-12, Math.max(1,bw-0.5), bh);
+  }
+  ctx.fillStyle="#8a9aa0";ctx.font="11px Meiryo,sans-serif";
+  const nyq=fs/2, step=Math.max(10,Math.round(nyq/6/10)*10);
+  for(let f=0;f<=nyq;f+=step){const k=f/(fs/N);const x=k*bw;ctx.fillText(f+"Hz",Math.min(x,W-28),H-1);}
+}
+function drawDecompose(){
+  const boxes=[["cvS1","eq1"],["cvS2","eq2"],["cvS3","eq3"]];
+  const synthHint=$("synthHint");
+  if(!lastPeaks||lastPeaks.length===0){
+    boxes.forEach(([cv,eq])=>{const c=$(cv),x=c.getContext("2d");clr(x,c.width,c.height);$(eq).textContent="y = --";});
+    synthHint.style.display="block";
+    const cs=$("cvSynth"),xs=cs.getContext("2d");clr(xs,cs.width,cs.height);grid(xs,cs.width,cs.height,4);
+    return;
+  }
+  synthHint.style.display="none";
+  const comps=lastPeaks.map(p=>({k:p.k,amp:2*p.m/N,phase:Math.atan2(p.im,p.re),freqHz:p.k*fs/N}));
+  comps.forEach((cp,idx)=>{
+    const [cv,eq]=boxes[idx];
+    const c=$(cv),ctx=c.getContext("2d"),W=c.width,H=c.height;
+    clr(ctx,W,H);
+    const mx=cp.amp||1;
+    ctx.beginPath();
+    for(let i=0;i<N;i++){const v=cp.amp*Math.cos(2*Math.PI*cp.k*i/N+cp.phase);const x=i/(N-1)*W,y=H/2-(v/(mx*1.1))*(H/2-6);i?ctx.lineTo(x,y):ctx.moveTo(x,y);}
+    ctx.strokeStyle=["#3AABA8","#2E8EC4","#E88A0A"][idx];ctx.lineWidth=2;ctx.stroke();
+    $(eq).textContent=`y = ${cp.amp.toFixed(0)}·sin(${cp.freqHz.toFixed(1)}Hz)`;
+  });
+  const cs=$("cvSynth"),xs=cs.getContext("2d"),W=cs.width,H=cs.height;
+  clr(xs,W,H);grid(xs,W,H,4);
+  let mx=1; if(lastWave)for(const v of lastWave)if(Math.abs(v)>mx)mx=Math.abs(v);
+  if(lastWave){
+    xs.beginPath();
+    for(let i=0;i<N;i++){const x=i/(N-1)*W,y=H/2-(lastWave[i]/mx)*(H/2-12);i?xs.lineTo(x,y):xs.moveTo(x,y);}
+    xs.strokeStyle="#9fcecc";xs.lineWidth=3;xs.stroke();
+  }
+  xs.beginPath();
+  for(let i=0;i<N;i++){let v=0;for(const cp of comps)v+=cp.amp*Math.cos(2*Math.PI*cp.k*i/N+cp.phase);const x=i/(N-1)*W,y=H/2-(v/mx)*(H/2-12);i?xs.lineTo(x,y):xs.moveTo(x,y);}
+  xs.strokeStyle="#E88A0A";xs.lineWidth=2;xs.setLineDash([6,4]);xs.stroke();xs.setLineDash([]);
+}
+
+/* ===== math tab: winding ===== */
+let windF=2.0;
+const SIGN={f1:3,f2:5};
+function sigVal(t){ return 1 + Math.cos(2*Math.PI*SIGN.f1*t) + 0.7*Math.cos(2*Math.PI*SIGN.f2*t); }
+function drawWinding(){
+  const c=$("cvWind"),ctx=c.getContext("2d"),W=c.width,H=c.height;
+  clr(ctx,W,H);
+  const cx=W/2,cy=H/2,R=H/2-30;
+  ctx.strokeStyle="#e3eaea";ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(0,cy);ctx.lineTo(W,cy);ctx.moveTo(cx,0);ctx.lineTo(cx,H);ctx.stroke();
+  ctx.fillStyle="#8a9aa0";ctx.font="12px Meiryo,sans-serif";
+  ctx.fillText("実軸 (cos)",W-82,cy-6); ctx.fillText("虚軸 (sin)",cx+6,14);
+  const M=600; let gx=0,gy=0;
+  ctx.beginPath();
+  for(let i=0;i<M;i++){
+    const t=i/M; const g=sigVal(t); const ang=2*Math.PI*windF*t;
+    const x=g*Math.cos(ang), y=g*Math.sin(ang); gx+=x; gy+=y;
+    const px=cx+x/3.2*R, py=cy-y/3.2*R;
+    i?ctx.lineTo(px,py):ctx.moveTo(px,py);
+  }
+  ctx.strokeStyle="#3AABA8";ctx.lineWidth=1.4;ctx.globalAlpha=.85;ctx.stroke();ctx.globalAlpha=1;
+  gx/=M; gy/=M;
+  const px=cx+gx/3.2*R, py=cy-gy/3.2*R;
+  ctx.strokeStyle="#E88A0A";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(px,py);ctx.stroke();
+  ctx.fillStyle="#E88A0A";ctx.beginPath();ctx.arc(px,py,7,0,2*Math.PI);ctx.fill();
+}
+function drawWindSpec(){
+  const c=$("cvWindSpec"),ctx=c.getContext("2d"),W=c.width,H=c.height;
+  clr(ctx,W,H);grid(ctx,W,H,4);
+  const fmin=0.5,fmax=8,steps=200,M=300;
+  let mags=[],mx=1e-6;
+  for(let s=0;s<=steps;s++){
+    const f=fmin+(fmax-fmin)*s/steps; let gx=0,gy=0;
+    for(let i=0;i<M;i++){const t=i/M;const g=sigVal(t);const a=2*Math.PI*f*t;gx+=g*Math.cos(a);gy+=g*Math.sin(a);}
+    const m=Math.hypot(gx/M,gy/M); mags.push({f,m}); if(m>mx)mx=m;
+  }
+  ctx.beginPath();
+  mags.forEach((d,i)=>{const x=(d.f-fmin)/(fmax-fmin)*W;const y=H-8-(d.m/mx)*(H-24);i?ctx.lineTo(x,y):ctx.moveTo(x,y);});
+  ctx.strokeStyle="#2E8EC4";ctx.lineWidth=2;ctx.stroke();
+  const xf=(windF-fmin)/(fmax-fmin)*W;
+  ctx.strokeStyle="#E88A0A";ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(xf,0);ctx.lineTo(xf,H);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle="#8a9aa0";ctx.font="11px Meiryo,sans-serif";
+  ctx.fillText("f (回/秒)",W-58,H-2); ctx.fillText("0.5",2,H-2); ctx.fillText("8",W-12,H-2);
+}
+
+/* ===== status / clock ===== */
+function setStatus(s){
+  const dot=$("statusDot"),txt=$("statusText"); dot.className="dot";
+  if(s==="on"){dot.classList.add("on");txt.textContent="接続中";}
+  else if(s==="demo"){dot.classList.add("demo");txt.textContent="デモ中";}
+  else{txt.textContent="未接続";}
+}
+function tickClock(){const d=new Date();$("clock").textContent=[d.getHours(),d.getMinutes(),d.getSeconds()].map(n=>String(n).padStart(2,"0")).join(":");}
+
+/* ===== main loop ===== */
+function loop(){
+  const now=performance.now();
+  if(now-lastRateT>=1000){
+    const r=Math.round(sampleCount*1000/(now-lastRateT));
+    if(r>0) fs=r; sampleCount=0; lastRateT=now;
+    $("fsVal").textContent=fs; $("nyqVal").textContent=Math.round(fs/2);
+  }
+  const active=(port||demo);
+  curLevel=active?computeLevel():0;
+  lvHist[lvHead]=curLevel; lvHead=(lvHead+1)%lvHistMax; if(lvFilled<lvHistMax)lvFilled++;
+  if(active){
+    let mx=-Infinity,mn=Infinity,sum=0,cnt=0;
+    for(let i=0;i<lvFilled;i++){const v=lvHist[(lvHead-1-i+lvHistMax)%lvHistMax];mx=Math.max(mx,v);mn=Math.min(mn,v);sum+=v;cnt++;}
+    $("stMax").textContent=mx.toFixed(0);$("stMin").textContent=mn.toFixed(0);
+    $("stAvg").textContent=(sum/cnt).toFixed(0);$("stCur").textContent=curLevel.toFixed(0);
+    $("cbCur").textContent=curLevel.toFixed(0);
+  }
+  analyze();
+  if(activeView==="measure"){drawWave();drawSpec();}
+  else if(activeView==="decompose"){drawDecompose();}
+  else if(activeView==="math"){drawWinding();drawWindSpec();}
+  requestAnimationFrame(loop);
+}
+
+/* ===== events ===== */
+$("connectBtn").onclick=connect;
+$("disconnectBtn").onclick=disconnect;
+$("demoBtn").onclick=toggleDemo;
+$("windFreq").oninput=e=>{windF=parseFloat(e.target.value);$("windF").textContent=windF.toFixed(2);};
+document.querySelectorAll(".tab").forEach(t=>{
+  t.onclick=()=>{
+    document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+    document.querySelectorAll(".view").forEach(x=>x.classList.remove("active"));
+    t.classList.add("active"); activeView=t.dataset.view;
+    $("view-"+activeView).classList.add("active");
+  };
+});
+
+setInterval(tickClock,1000); tickClock();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
