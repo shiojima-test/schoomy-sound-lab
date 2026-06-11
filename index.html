@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- スクーミー 音ラボ | version: v1.2 -->
+<!-- スクーミー 音ラボ | version: v1.3 -->
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>スクーミー 音ラボ v1.2</title>
+<title>スクーミー 音ラボ v1.3</title>
 <style>
   :root{
     --teal:#3AABA8;--teal-d:#2c8a87;--cream:#F5E4C4;--orange:#E88A0A;
@@ -102,7 +102,7 @@
   <div class="hd-in">
     <span class="logo">SchooMy</span>
     <h1 class="h-title">音<b>ラボ</b></h1>
-    <span class="pill">v1.2</span>
+    <span class="pill">v1.3</span>
     <div class="hd-right">
       <span class="clock" id="clock">--:--:--</span>
       <span class="chip" id="statusChip"><span class="dot" id="statusDot"></span><span id="statusText">未接続</span></span>
@@ -190,11 +190,11 @@
   </div>
 </div>
 
-<footer>SchooMy 音ラボ v1.2 ｜ 測る・比べる・つながる ｜ fox.schoomy.com</footer>
+<footer>SchooMy 音ラボ v1.3 ｜ 測る・比べる・つながる ｜ fox.schoomy.com</footer>
 
 <script>
 "use strict";
-const VERSION="v1.2";
+const VERSION="v1.3";
 const $=id=>document.getElementById(id);
 
 /* ===== state ===== */
@@ -256,11 +256,21 @@ function startDemo(){
   demo=true; setStatus("demo");
   $("demoBtn").textContent="■ 停止";
   $("cbStatus").textContent="デモ動作中 — 擬似的な音の波形を流しています";
-  let t=0;
+  let t=0, curAmp=120, targetAmp=120, nextChange=0, spikeUntil=0;
   demoTimer=setInterval(()=>{
-    const env=0.55+0.45*Math.sin(t*0.06);
     for(let k=0;k<6;k++){
-      const s=2048+env*420*Math.sin(2*Math.PI*8*t/180)+env*220*Math.sin(2*Math.PI*15*t/180)+(Math.random()-0.5)*70;
+      // 数百ms〜1秒強ごとに目標音量を変える（静かな時間〜大きい時間まで多様に）
+      if(t>=nextChange){ targetAmp=20+Math.random()*Math.random()*960; nextChange=t+50+Math.random()*420; }
+      // たまに突発ピーク（手拍子・大声）
+      if(Math.random()<0.0012) spikeUntil=t+8+Math.random()*16;
+      curAmp+=(targetAmp-curAmp)*0.05;        // 目標へ滑らかに追従
+      let amp=curAmp;
+      if(t<spikeUntil) amp=Math.max(curAmp,720+Math.random()*520);
+      const s=2048
+        +amp*Math.sin(2*Math.PI*8*t/180)
+        +amp*0.5*Math.sin(2*Math.PI*15*t/180)
+        +amp*0.3*Math.sin(2*Math.PI*23*t/180)
+        +(Math.random()-0.5)*60;
       pushSample(s); t++;
     }
   },16);
